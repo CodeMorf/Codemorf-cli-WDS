@@ -27,7 +27,26 @@ jobs:
       - name: Web build
         run: npm run build
       - name: Rust check
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+        id: rustcheck
+        shell: pwsh
+        run: |
+          cargo check --manifest-path src-tauri/Cargo.toml 2>&1 | Tee-Object -FilePath cargo-check.log
+          if ($LASTEXITCODE -ne 0) {
+            "failed=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "failed=false" >> $env:GITHUB_OUTPUT
+          }
+      - name: Upload Rust diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-check-log
+          path: cargo-check.log
+          if-no-files-found: error
+      - name: Stop if Rust check failed
+        if: steps.rustcheck.outputs.failed == 'true'
+        shell: pwsh
+        run: exit 1
       - name: Build Windows installers
         run: npm run desktop:build
       - name: Upload Windows bundles
