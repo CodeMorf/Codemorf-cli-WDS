@@ -43,6 +43,7 @@ interface CodexWorkspaceProps {
   onOpenDiffModal: () => void;
   timeline: ActivityTimelineItem[];
   onNavigateToView: (view: any) => void;
+  onOpenVoiceAssistant?: () => void;
 }
 
 export const CodexWorkspace: React.FC<CodexWorkspaceProps> = ({
@@ -53,7 +54,8 @@ export const CodexWorkspace: React.FC<CodexWorkspaceProps> = ({
   onStopAgent,
   onOpenDiffModal,
   timeline,
-  onNavigateToView
+  onNavigateToView,
+  onOpenVoiceAssistant
 }) => {
   const [inputText, setInputText] = useState('');
   const [selectedModel, setSelectedModel] = useState('5.6 Luna Muy alto');
@@ -67,6 +69,40 @@ export const CodexWorkspace: React.FC<CodexWorkspaceProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Voice dictation handling
+  const toggleVoiceDictation = () => {
+    if (onOpenVoiceAssistant) {
+      onOpenVoiceAssistant();
+      return;
+    }
+
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      const text = prompt('Dictado por voz: Escribe tu consulta:');
+      if (text) setInputText((prev) => (prev ? prev + ' ' + text : text));
+      return;
+    }
+
+    if (isVoiceActive) {
+      setIsVoiceActive(false);
+    } else {
+      try {
+        const recognition = new SpeechRecognitionAPI();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false;
+        recognition.onstart = () => setIsVoiceActive(true);
+        recognition.onresult = (e: any) => {
+          const speechResult = e.results[0][0].transcript;
+          setInputText((prev) => (prev ? prev + ' ' + speechResult : speechResult));
+        };
+        recognition.onerror = () => setIsVoiceActive(false);
+        recognition.onend = () => setIsVoiceActive(false);
+        recognition.start();
+      } catch (err) {
+        setIsVoiceActive(false);
+      }
+    }
+  };
   const modelsList = [
     { id: 'codemorf-2026', name: 'CodeMorf API 2026', badge: 'Ultra Coder', provider: 'CodeMorf' },
     { id: 'luna-5.6', name: '5.6 Luna Muy alto', badge: 'Codex Standard', provider: 'Luna Core' },
@@ -438,15 +474,21 @@ export const CodexWorkspace: React.FC<CodexWorkspaceProps> = ({
                   )}
                 </div>
 
-                {/* Voice Dictation Button */}
+                {/* Real-Time Voice Assistant Touch / Mic Button */}
                 <button
-                  onClick={() => setIsVoiceActive(!isVoiceActive)}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isVoiceActive ? 'bg-rose-900/60 text-rose-300 animate-pulse' : 'text-gray-400 hover:text-white hover:bg-[#2a2f3d]'
+                  id="voice-assistant-prompt-btn"
+                  onClick={toggleVoiceDictation}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
+                    isVoiceActive
+                      ? 'bg-rose-900/80 text-rose-200 border border-rose-600/60 animate-pulse'
+                      : 'bg-[#222736] hover:bg-cyan-950/60 text-cyan-300 border border-cyan-800/40 hover:border-cyan-600/60'
                   }`}
-                  title="Dictado por voz"
+                  title="Toca con el dedo o pulsa para hablar en tiempo real"
                 >
-                  <Mic size={14} />
+                  <Mic size={13} className={isVoiceActive ? 'text-rose-400' : 'text-cyan-400'} />
+                  <span className="text-[11px] font-medium hidden sm:inline">
+                    {isVoiceActive ? 'Escuchando...' : 'Voz Real'}
+                  </span>
                 </button>
 
                 {/* Send / Stop Button */}

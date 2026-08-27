@@ -26,8 +26,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 2 min',
     lastPromptSnippet: 'Te paso un ZIP de AI Studio para levantarlo en local...',
     pinned: true,
+    isArchived: false,
     status: 'running',
-    filesCount: 42
+    filesCount: 42,
+    permissionLevel: 'full_access',
+    techStack: 'React 19 + Express + Tailwind CSS',
+    description: 'SaaS para control y conciliación de gastos empresariales con IA local',
+    createdDate: '2026-08-15'
   },
   {
     id: 'proj-allsender',
@@ -38,8 +43,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 1 hora',
     lastPromptSnippet: 'Verifica ERP Allsender en servidor y endpoints OAuth',
     pinned: true,
+    isArchived: false,
     status: 'completed',
-    filesCount: 88
+    filesCount: 88,
+    permissionLevel: 'ask_confirmation',
+    techStack: 'Node.js + PostgreSQL + OAuth2',
+    description: 'Servicio de autenticación centralizada y pasarela de tokens para Allsender',
+    createdDate: '2026-08-10'
   },
   {
     id: 'proj-fisco',
@@ -50,8 +60,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Ayer',
     lastPromptSnippet: 'Sincronizar timbrado SAT con webhooks',
     pinned: false,
+    isArchived: false,
     status: 'idle',
-    filesCount: 156
+    filesCount: 156,
+    permissionLevel: 'ask_confirmation',
+    techStack: 'Laravel PHP 11 + Filament + MySQL',
+    description: 'Sistema ERP con facturación electrónica y timbrado CFDI 4.0 automatizado',
+    createdDate: '2026-07-28'
   },
   {
     id: 'proj-gopaq',
@@ -62,8 +77,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 3 días',
     lastPromptSnippet: 'Tracking en tiempo real de paquetería',
     pinned: false,
+    isArchived: false,
     status: 'idle',
-    filesCount: 64
+    filesCount: 64,
+    permissionLevel: 'read_only',
+    techStack: 'Next.js 15 + Prisma + Redis',
+    description: 'Hub logístico y seguimiento satelital de envíos con webhooks',
+    createdDate: '2026-08-01'
   },
   {
     id: 'proj-codemorf-scraper',
@@ -74,8 +94,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 5 horas',
     lastPromptSnippet: 'Scraper multihilo con rotación de proxies residenciales',
     pinned: false,
+    isArchived: false,
     status: 'completed',
-    filesCount: 23
+    filesCount: 23,
+    permissionLevel: 'full_access',
+    techStack: 'Python 3.12 + Playwright + BeautifulSoup',
+    description: 'Extractor de datos y prospección B2B automatizada en República Dominicana',
+    createdDate: '2026-08-20'
   },
   {
     id: 'proj-ship24go',
@@ -86,8 +111,13 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 2 días',
     lastPromptSnippet: 'Hola, sincroniza la API de tarifas aduanales',
     pinned: false,
+    isArchived: false,
     status: 'idle',
-    filesCount: 95
+    filesCount: 95,
+    permissionLevel: 'ask_confirmation',
+    techStack: 'Vue 3 + FastAPI + PostgreSQL',
+    description: 'Plataforma de comercio exterior y cálculo de impuestos arancelarios',
+    createdDate: '2026-07-14'
   },
   {
     id: 'proj-vps',
@@ -98,20 +128,30 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     lastActive: 'Hace 4 días',
     lastPromptSnippet: 'Accede al VPS trucloud y configura Docker compose',
     pinned: false,
+    isArchived: false,
     status: 'idle',
-    filesCount: 12
+    filesCount: 12,
+    permissionLevel: 'read_only',
+    techStack: 'Docker + Nginx + Ubuntu Server',
+    description: 'Aprovisionamiento de servidores Linux VPS y proxy inverso seguro',
+    createdDate: '2026-08-05'
   },
   {
-    id: 'proj-restapp',
-    name: 'RESTAPP Microservices',
-    category: 'Proyectos',
-    path: 'C:/Users/Kitgiz/Projects/RESTAPP',
-    branch: 'main',
-    lastActive: 'Hace 1 sem',
-    lastPromptSnippet: 'Sin chats activos',
+    id: 'proj-legacy-crm',
+    name: 'CRM Legacy 2024 (Archivado)',
+    category: 'Archivados',
+    path: 'C:/Users/Kitgiz/Archive/CRM-2024',
+    branch: 'v1.4-archive',
+    lastActive: 'Hace 3 meses',
+    lastPromptSnippet: 'Proyecto archivado para consulta histórica',
     pinned: false,
+    isArchived: true,
     status: 'idle',
-    filesCount: 37
+    filesCount: 110,
+    permissionLevel: 'read_only',
+    techStack: 'React 18 + Node.js + MongoDB',
+    description: 'Versión anterior del CRM corporativo; archivada en modo sólo lectura',
+    createdDate: '2024-03-12'
   }
 ];
 
@@ -720,10 +760,13 @@ export const INITIAL_MCP_SERVERS: McpServer[] = [
 export const INITIAL_AI_PROVIDERS: AiProvider[] = [
   {
     id: 'codemorf-api',
-    name: 'CodeMorf API (Recomendado)',
+    name: 'CodeMorf Multi-Agent Cloud API',
     isFeatured: true,
     status: 'connected',
+    isConfigured: true,
     apiKeyPlaceholder: 'cm_live_99f2b84a32904bc89c4...',
+    apiKey: 'cm_live_99f2b84a32904bc89c4d92a10e82',
+    userApiKey: 'cm_live_99f2b84a32904bc89c4d92a10e82',
     baseUrl: 'https://api.codemorf.tech/v1',
     docsUrl: 'https://codemorf.tech/chat/docs/es/',
     defaultModel: 'codemorf-ultra-coder-2026',
@@ -731,66 +774,110 @@ export const INITIAL_AI_PROVIDERS: AiProvider[] = [
       'codemorf-ultra-coder-2026',
       'codemorf-reasoning-r1',
       'codemorf-fast-coder-mini',
-      'codemorf-vision-pro'
-    ]
+      'codemorf-voice-stream-2026'
+    ],
+    models: [
+      'codemorf-ultra-coder-2026',
+      'codemorf-reasoning-r1',
+      'codemorf-fast-coder-mini',
+      'codemorf-voice-stream-2026'
+    ],
+    supportsAudio: true,
+    audioFeatureDetails: 'Voz bidireccional humana ultra-rápida (200ms de latencia) + Transcripción nativa'
   },
   {
     id: 'openai',
-    name: 'OpenAI',
+    name: 'OpenAI (GPT-4o / Realtime)',
     status: 'configured',
+    isConfigured: true,
     apiKeyPlaceholder: 'sk-proj-••••••••••••••••',
+    apiKey: 'sk-proj-91a0b38c29014efa818290bcdae829',
+    userApiKey: 'sk-proj-91a0b38c29014efa818290bcdae829',
     baseUrl: 'https://api.openai.com/v1',
     defaultModel: 'gpt-4o',
-    availableModels: ['gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o3-mini']
+    availableModels: ['gpt-4o', 'gpt-4o-realtime-preview', 'gpt-4o-mini', 'o1-preview', 'o3-mini'],
+    models: ['gpt-4o', 'gpt-4o-realtime-preview', 'gpt-4o-mini', 'o1-preview', 'o3-mini'],
+    supportsAudio: true,
+    audioFeatureDetails: 'Audio nativo GPT-4o Realtime API con entrada y salida de voz humana multilingüe'
   },
   {
-    id: 'xai-grok',
-    name: 'xAI / Grok',
+    id: 'google-gemini',
+    name: 'Google Gemini (Live Audio)',
     status: 'connected',
-    apiKeyPlaceholder: 'xai-••••••••••••••••',
-    baseUrl: 'https://api.x.ai/v1',
-    defaultModel: 'grok-3',
-    availableModels: ['grok-3', 'grok-3-mini', 'grok-2-vision']
+    isConfigured: true,
+    apiKeyPlaceholder: 'AIzaSy••••••••••••••••',
+    apiKey: 'AIzaSy88190BCAFE01928472910482019482',
+    userApiKey: 'AIzaSy88190BCAFE01928472910482019482',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: 'gemini-2.5-pro',
+    availableModels: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash-realtime'],
+    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash-realtime'],
+    supportsAudio: true,
+    audioFeatureDetails: 'Gemini Multimodal Live API con streaming de voz humana bidireccional y bajo retardo'
   },
   {
     id: 'anthropic',
-    name: 'Anthropic',
+    name: 'Anthropic Claude',
     status: 'configured',
+    isConfigured: true,
     apiKeyPlaceholder: 'sk-ant-api03-••••••••••••',
+    apiKey: 'sk-ant-api03-bb90184728919018247019824',
+    userApiKey: 'sk-ant-api03-bb90184728919018247019824',
     baseUrl: 'https://api.anthropic.com/v1',
     defaultModel: 'claude-3-7-sonnet-20250219',
     availableModels: [
       'claude-3-7-sonnet-20250219',
       'claude-3-5-sonnet-latest',
       'claude-3-5-haiku-latest'
-    ]
+    ],
+    models: [
+      'claude-3-7-sonnet-20250219',
+      'claude-3-5-sonnet-latest',
+      'claude-3-5-haiku-latest'
+    ],
+    supportsAudio: false,
+    audioFeatureDetails: 'Solo Texto y Código (No incluye streaming de audio nativo)'
   },
   {
-    id: 'google-gemini',
-    name: 'Google Gemini',
+    id: 'xai-grok',
+    name: 'xAI Grok',
     status: 'connected',
-    apiKeyPlaceholder: 'AIzaSy••••••••••••••••',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: 'gemini-2.5-pro',
-    availableModels: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash-thinking-exp']
+    isConfigured: true,
+    apiKeyPlaceholder: 'xai-••••••••••••••••',
+    apiKey: 'xai-81928401928491028301948201948201',
+    userApiKey: 'xai-81928401928491028301948201948201',
+    baseUrl: 'https://api.x.ai/v1',
+    defaultModel: 'grok-3',
+    availableModels: ['grok-3', 'grok-3-mini', 'grok-2-vision'],
+    models: ['grok-3', 'grok-3-mini', 'grok-2-vision'],
+    supportsAudio: false,
+    audioFeatureDetails: 'Solo Texto y Visión de código (No soporta voz en tiempo real directa)'
   },
   {
     id: 'openrouter',
-    name: 'OpenRouter',
+    name: 'OpenRouter (DeepSeek R1 / Llama)',
     status: 'disconnected',
+    isConfigured: false,
     apiKeyPlaceholder: 'sk-or-v1-••••••••••••••••',
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: 'deepseek/deepseek-r1',
-    availableModels: ['deepseek/deepseek-r1', 'qwen/qwen-2.5-coder-32b', 'meta-llama/llama-3.3-70b-instruct']
+    availableModels: ['deepseek/deepseek-r1', 'qwen/qwen-2.5-coder-32b', 'meta-llama/llama-3.3-70b-instruct'],
+    models: ['deepseek/deepseek-r1', 'qwen/qwen-2.5-coder-32b', 'meta-llama/llama-3.3-70b-instruct'],
+    supportsAudio: false,
+    audioFeatureDetails: 'Solo Texto y Razonamiento R1 (Sin streaming de audio)'
   },
   {
     id: 'custom-openai',
-    name: 'Custom OpenAI-Compatible API',
+    name: 'Custom Local Ollama / vLLM',
     status: 'disconnected',
-    apiKeyPlaceholder: 'custom-token-here',
+    isConfigured: false,
+    apiKeyPlaceholder: 'custom-token-or-empty',
     baseUrl: 'http://localhost:11434/v1',
     defaultModel: 'ollama-codellama',
-    availableModels: ['ollama-codellama', 'local-deepseek-coder', 'vllm-model']
+    availableModels: ['ollama-codellama', 'local-deepseek-coder', 'vllm-model'],
+    models: ['ollama-codellama', 'local-deepseek-coder', 'vllm-model'],
+    supportsAudio: false,
+    audioFeatureDetails: 'Servidor Local (Requiere puente Piper TTS o Whisper externo para voz)'
   }
 ];
 
@@ -799,36 +886,46 @@ export const SMART_ROUTER_RULES: SmartRouterRule[] = [
     id: 'rule-simple',
     taskType: 'Simple tasks & quick queries',
     recommendedModel: 'CodeMorf Fast Mini / Grok-3 Mini',
+    model: 'CodeMorf Fast Mini / Grok-3 Mini',
     provider: 'CodeMorf API',
-    description: 'Respuestas instantáneas (<500ms) para consultas rápidas, explicaciones de sintaxis y renombrado de variables.'
+    description: 'Respuestas instantáneas (<500ms) para consultas rápidas, explicaciones de sintaxis y renombrado de variables.',
+    reason: 'Baja latencia y bajo consumo de tokens para edición rápida.'
   },
   {
     id: 'rule-coding',
     taskType: 'Coding & Multi-file editing',
     recommendedModel: 'CodeMorf Ultra Coder / Claude 3.7 Sonnet',
+    model: 'CodeMorf Ultra Coder / Claude 3.7 Sonnet',
     provider: 'CodeMorf API',
-    description: 'Generación precisa de código TypeScript, refactorización transversal y mantenimiento de contratos.'
+    description: 'Generación precisa de código TypeScript, refactorización transversal y mantenimiento de contratos.',
+    reason: 'Máxima precisión en sintaxis y resolución de dependencias.'
   },
   {
     id: 'rule-arch',
     taskType: 'Architecture & System design',
     recommendedModel: 'CodeMorf Reasoning R1 / OpenAI o1',
+    model: 'CodeMorf Reasoning R1 / OpenAI o1',
     provider: 'CodeMorf API',
-    description: 'Análisis profundo de dependencias, diseño de esquemas de bases de datos y orquestación multi-agente.'
+    description: 'Análisis profundo de dependencias, diseño de esquemas de bases de datos y orquestación multi-agente.',
+    reason: 'Razonamiento recursivo para prevenir errores estructurales.'
   },
   {
     id: 'rule-vision',
     taskType: 'Vision & UI inspection',
     recommendedModel: 'Gemini 2.5 Pro / Grok-2 Vision',
+    model: 'Gemini 2.5 Pro / Grok-2 Vision',
     provider: 'Google Gemini',
-    description: 'Inspección de capturas del navegador integrado, diseño visual Pixel-Perfect y detección de bugs visuales.'
+    description: 'Inspección de capturas del navegador integrado, diseño visual Pixel-Perfect y detección de bugs visuales.',
+    reason: 'Comprensión multimodal de alta resolución.'
   },
   {
     id: 'rule-context',
     taskType: 'Large context & Full repo analysis',
     recommendedModel: 'Gemini 2.5 Pro (2M Tokens) / Claude 3.7',
+    model: 'Gemini 2.5 Pro (2M Tokens) / Claude 3.7',
     provider: 'Google Gemini',
-    description: 'Lectura completa de repositorios de gran envergadura sin pérdida de contexto en la ventana de atención.'
+    description: 'Lectura completa de repositorios de gran envergadura sin pérdida de contexto en la ventana de atención.',
+    reason: 'Ventana de contexto de 2 millones de tokens sin degradación.'
   }
 ];
 
@@ -837,37 +934,73 @@ export const INITIAL_AUTOMATIONS: AutomationJob[] = [
     id: 'auto-nightly',
     name: 'Nightly E2E & Unit Tests Suite',
     schedule: 'Todos los días a las 02:00 AM',
+    trigger: 'Diario a las 02:00 AM',
     nextRun: 'Mañana 02:00 AM',
     lastStatus: 'success',
+    lastRun: 'Hoy 02:00 AM (27 tests aprobados)',
     targetAgent: 'QA Test Agent',
-    enabled: true
+    enabled: true,
+    triggerType: 'cron',
+    description: 'Ejecuta automáticamente la suite completa de pruebas unitarias y de integración en Windows, generando un reporte de cobertura.',
+    actionPrompt: 'Ejecutar npm test con vitest y generar reporte de cobertura en /coverage',
+    executionLogs: [
+      '[02:00:01] Iniciando runner en C:/Users/Kitgiz/Projects/ErogaAI',
+      '[02:00:04] 27 tests ejecutados sin errores',
+      '[02:00:05] Cobertura alcanzada: 91.4%'
+    ]
   },
   {
     id: 'auto-security',
     name: 'Security & Dependency Vulnerability Review',
     schedule: 'Todos los viernes a las 18:00 PM',
+    trigger: 'Semanal (Viernes 18:00)',
     nextRun: 'Viernes 18:00 PM',
     lastStatus: 'success',
+    lastRun: 'Viernes pasado (0 vulnerabilidades críticas)',
     targetAgent: 'Security Auditor',
-    enabled: true
+    enabled: true,
+    triggerType: 'cron',
+    description: 'Auditoría automática de paquetes npm, análisis estático de vulnerabilidades OWASP y verificación de secretos expuestos.',
+    actionPrompt: 'npm audit --json y escaneo estático de secrets con Security Agent',
+    executionLogs: [
+      '[18:00:00] Analizando 142 paquetes dependientes',
+      '[18:00:03] 0 vulnerabilidades detectadas'
+    ]
   },
   {
     id: 'auto-issues',
     name: 'Check GitHub Issues & Auto-Triage',
     schedule: 'Cada 6 horas',
+    trigger: 'Intervalo de 6 horas',
     nextRun: 'En 3 horas (21:30)',
     lastStatus: 'running',
+    lastRun: 'Hace 3 horas (2 issues categorizados)',
     targetAgent: 'Frontend Architect',
-    enabled: true
+    enabled: true,
+    triggerType: 'interval',
+    description: 'Revisa nuevos issues y pull requests en GitHub, etiqueta severidades y redacta propuestas de solución con diffs.',
+    actionPrompt: 'Sincronizar GitHub issues mediante API y etiquetar bugs / features',
+    executionLogs: [
+      '[15:30:10] Consultando API de GitHub...',
+      '[15:30:12] 1 issue pendiente de revisión asignado al backlog'
+    ]
   },
   {
     id: 'auto-backup',
     name: 'Automatic Memory & Project Snapshot Sync',
     schedule: 'Cada 1 hora',
+    trigger: 'Intervalo de 1 hora',
     nextRun: 'En 18 minutos',
     lastStatus: 'success',
+    lastRun: 'Hace 42 minutos',
     targetAgent: 'CodeMorf Daemon',
-    enabled: true
+    enabled: true,
+    triggerType: 'interval',
+    description: 'Crea snapshots incrementales del estado del proyecto, memorias persistentes y contexto de multi-agentes.',
+    actionPrompt: 'Crear backup snapshot en .codemorf/snapshots/',
+    executionLogs: [
+      '[18:15:00] Snapshot incremental #482 guardado satisfactoriamente'
+    ]
   }
 ];
 

@@ -1,5 +1,7 @@
 export type ThemeMode = 'dark' | 'light' | 'system';
 
+export type PermissionLevel = 'read_only' | 'ask_confirmation' | 'full_access';
+
 export type MainView = 
   | 'workspace'
   | 'multi-agent'
@@ -28,8 +30,13 @@ export interface ProjectItem {
   lastActive: string;
   lastPromptSnippet?: string;
   pinned?: boolean;
+  isArchived?: boolean;
   status: 'idle' | 'running' | 'completed' | 'error';
   filesCount?: number;
+  permissionLevel?: PermissionLevel;
+  techStack?: string;
+  description?: string;
+  createdDate?: string;
 }
 
 export interface AgentInfo {
@@ -173,28 +180,42 @@ export interface AiProvider {
   isFeatured?: boolean;
   status: 'connected' | 'configured' | 'disconnected';
   apiKeyPlaceholder: string;
+  apiKey?: string;
+  userApiKey?: string;
+  isConfigured?: boolean;
   baseUrl: string;
   docsUrl?: string;
   defaultModel: string;
   availableModels: string[];
+  models?: string[];
+  supportsAudio: boolean;
+  audioFeatureDetails?: string;
 }
 
 export interface SmartRouterRule {
   id: string;
   taskType: string;
   recommendedModel: string;
+  model?: string;
   provider: string;
   description: string;
+  reason?: string;
 }
 
 export interface AutomationJob {
   id: string;
   name: string;
   schedule: string;
+  trigger?: string;
   nextRun: string;
   lastStatus: 'success' | 'failed' | 'running' | 'idle';
+  lastRun?: string;
   targetAgent: string;
   enabled: boolean;
+  description?: string;
+  triggerType?: 'cron' | 'interval' | 'git_hook' | 'manual';
+  actionPrompt?: string;
+  executionLogs?: string[];
 }
 
 export interface NotificationItem {
@@ -204,4 +225,33 @@ export interface NotificationItem {
   time: string;
   type: 'success' | 'warning' | 'error' | 'info';
   read: boolean;
+}
+
+// Aliases for compatibility
+export type ViewMode = MainView;
+export type McpServerItem = McpServer;
+export type AiProviderConfig = AiProvider;
+export type ModelRouterRule = SmartRouterRule;
+export type AutomationTask = AutomationJob;
+
+export interface AppState {
+  currentView: MainView;
+  projects: ProjectItem[];
+  activeProjectId: string;
+  agents: AgentInfo[];
+  timeline: ActivityTimelineItem[];
+  messages: ChatMessage[];
+  tasks: KanbanTask[];
+  planSteps: ImplementationPlanStep[];
+  permissions: PermissionCategory[];
+  memories: MemoryItem[];
+  skills: SkillItem[];
+  extensions: ExtensionItem[];
+  mcpServers: McpServer[];
+  aiProviders: AiProvider[];
+  routerRules: SmartRouterRule[];
+  automations: AutomationJob[];
+  notifications: NotificationItem[];
+  theme: ThemeMode;
+  isAgentRunning: boolean;
 }

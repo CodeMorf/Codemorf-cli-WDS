@@ -16,7 +16,9 @@ import {
   Globe,
   SlidersHorizontal,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Mic,
+  Radio
 } from 'lucide-react';
 import { CodeMorfLogo } from './CodeMorfLogo';
 import { MainView, ThemeMode } from '../types';
@@ -30,6 +32,7 @@ interface TitleBarProps {
   onOpenCommandPalette: () => void;
   onOpenNotifications: () => void;
   onOpenSettings: () => void;
+  onOpenVoiceAssistant: () => void;
   unreadNotificationsCount: number;
 }
 
@@ -42,6 +45,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenCommandPalette,
   onOpenNotifications,
   onOpenSettings,
+  onOpenVoiceAssistant,
   unreadNotificationsCount
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -184,6 +188,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       {/* Right section: Quick actions, Theme, Notifications & Windows Controls */}
       <div className="flex items-center gap-1">
+        {/* Voice Assistant Touch / Mic button */}
+        <button
+          id="voice-assistant-titlebar-btn"
+          onClick={onOpenVoiceAssistant}
+          className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-rose-900/60 to-pink-900/60 hover:from-rose-800/80 hover:to-pink-800/80 text-rose-200 border border-rose-700/50 rounded-full transition-all text-[11px] shadow-sm animate-pulse"
+          title="Toca con el dedo o pulsa para hablar en tiempo real con el Asistente de Voz"
+        >
+          <Mic size={12} className="text-rose-400" />
+          <span className="font-semibold hidden sm:inline">Voz Tiempo Real</span>
+        </button>
+
         {/* Model Status Pill */}
         <div 
           onClick={() => onSelectView('providers')}

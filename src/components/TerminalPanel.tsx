@@ -68,15 +68,27 @@ export const TerminalPanel: React.FC = () => {
     let reply = `Command executed: ${cmd}`;
 
     if (cmd === 'help') {
-      reply = 'Comandos disponibles: npm test, git status, ls, clear, drizzle-kit push, exit';
-    } else if (cmd === 'clear') {
+      reply = 'Comandos disponibles (PowerShell/Windows/Bash):\n  - dir / ls: Listar archivos en directorio de trabajo\n  - npm run dev / npm test / npm run build: Scripts del proyecto\n  - git status / git log / git commit: Control de versiones\n  - ipconfig / whoami / ver / systeminfo: Información del sistema Windows\n  - cls / clear: Limpiar pantalla\n  - drizzle-kit push / npx prisma: Migraciones base de datos';
+    } else if (cmd === 'clear' || cmd === 'cls') {
       setTermLogs(prev => ({ ...prev, [activeTab]: [] }));
       setCommandInput('');
       return;
+    } else if (cmd === 'dir' || cmd === 'ls') {
+      reply = ` Directory of C:\\Users\\Kitgiz\\Projects\\ErogaAI\n\n08/26/2026  09:40 PM    <DIR>          .\n08/26/2026  09:40 PM    <DIR>          ..\n08/26/2026  09:35 PM    <DIR>          src\n08/26/2026  09:35 PM    <DIR>          server\n08/26/2026  09:35 PM    <DIR>          public\n08/26/2026  09:38 PM             1,420 package.json\n08/26/2026  09:38 PM               680 tsconfig.json\n08/26/2026  09:38 PM               412 vite.config.ts\n               3 File(s)          2,512 bytes\n               5 Dir(s)  312,852,193,280 bytes free`;
+    } else if (cmd === 'whoami') {
+      reply = 'DESKTOP-WIN11\\Kitgiz';
+    } else if (cmd === 'ver') {
+      reply = 'Microsoft Windows [Versión 10.0.22631.4112]';
+    } else if (cmd === 'ipconfig') {
+      reply = 'Configuración IP de Windows\n\nAdaptador de Ethernet Ethernet 2:\n   Sufijo DNS específico para la conexión. . : localdomain\n   Vínculo: dirección IPv6 local. . . : fe80::a1b2:c3d4:e5f6:7890%12\n   Dirección IPv4. . . . . . . . . . . . . . : 192.168.1.120\n   Máscara de subred . . . . . . . . . . . . : 255.255.255.0\n   Puerta de enlace predeterminada . . . . . : 192.168.1.1';
+    } else if (cmd.includes('npm run build') || cmd.includes('build')) {
+      reply = 'vite v6.2.3 building for production...\n✓ 142 modules transformed.\ndist/index.html                   0.92 kB │ gzip:  0.48 kB\ndist/assets/index-C7v9a21b.css   24.12 kB │ gzip:  5.80 kB\ndist/assets/index-Bx87c2aa.js   412.30 kB │ gzip: 128.45 kB\n✓ built in 640ms';
     } else if (cmd.includes('npm test')) {
-      reply = '✓ 27 tests passed across 4 suites in 0.82s.';
+      reply = '✓ 27 tests passed across 4 suites in 0.82s.\nPASS tests/unit/calc.test.ts\nPASS tests/unit/auth.test.ts\nPASS tests/unit/db.test.ts';
     } else if (cmd.includes('git status')) {
-      reply = 'On branch master\nNothing to commit, working tree clean.';
+      reply = 'On branch master\nYour branch is up to date with \'origin/master\'.\nNothing to commit, working tree clean.';
+    } else if (cmd.includes('drizzle-kit push')) {
+      reply = '[DrizzleKit] Reading config from drizzle.config.ts\n[DrizzleKit] Connecting to PostgreSQL on port 5432...\n[DrizzleKit] Applied 4 schema changes successfully.';
     }
 
     setTermLogs(prev => ({

@@ -23,9 +23,14 @@ import {
   Download,
   LayoutDashboard,
   Server,
-  Code2
+  Code2,
+  Plus,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  Lock
 } from 'lucide-react';
-import { MainView, ProjectItem } from '../types';
+import { MainView, ProjectItem, PermissionLevel } from '../types';
 
 interface SidebarProps {
   currentView: MainView;
@@ -35,6 +40,11 @@ interface SidebarProps {
   onSelectProject: (projectId: string) => void;
   onNewChat: () => void;
   onOpenSettings: () => void;
+  onOpenVoiceAssistant?: () => void;
+  onOpenNewProject?: () => void;
+  onArchiveProject?: (id: string) => void;
+  onUnarchiveProject?: (id: string) => void;
+  onDeleteProject?: (id: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -44,13 +54,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeProjectId,
   onSelectProject,
   onNewChat,
-  onOpenSettings
+  onOpenSettings,
+  onOpenVoiceAssistant,
+  onOpenNewProject,
+  onArchiveProject,
+  onUnarchiveProject,
+  onDeleteProject
 }) => {
   const [pinnedOpen, setPinnedOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
+  const [archivedOpen, setArchivedOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true);
 
-  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+  const activeProjects = projects.filter(p => !p.isArchived);
+  const archivedProjects = projects.filter(p => !!p.isArchived);
+  const pinnedProjects = activeProjects.filter(p => p.pinned);
+
+  const getPermissionBadge = (level?: PermissionLevel) => {
+    switch (level) {
+      case 'read_only':
+        return <span title="1. Solo Lectura" className="text-blue-400 font-mono text-[9px] px-1 py-0.2 bg-blue-950/60 rounded border border-blue-800/40">1-L</span>;
+      case 'full_access':
+        return <span title="3. Acceso Total" className="text-amber-400 font-mono text-[9px] px-1 py-0.2 bg-amber-950/60 rounded border border-amber-800/40">3-Auto</span>;
+      case 'ask_confirmation':
+      default:
+        return <span title="2. Confirmar Previo" className="text-cyan-400 font-mono text-[9px] px-1 py-0.2 bg-cyan-950/60 rounded border border-cyan-800/40">2-Conf</span>;
+    }
+  };
 
   return (
     <aside 
@@ -86,6 +116,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Sparkles size={14} className={currentView === 'workspace' ? 'text-cyan-400' : 'text-gray-500'} />
             <span>Agent Workspace</span>
+          </button>
+
+          {/* Real-Time Voice Assistant item */}
+          <button
+            id="sidebar-voice-btn"
+            onClick={onOpenVoiceAssistant || (() => onSelectView('workspace'))}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-rose-950/40 to-pink-950/40 hover:from-rose-900/60 hover:to-pink-900/60 text-rose-300 border border-rose-800/40 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Mic size={14} className="text-rose-400 animate-pulse group-hover:scale-110 transition-transform" />
+              <span className="font-medium">Voz Asistente (Touch)</span>
+            </div>
+            <span className="text-[9px] px-1.5 py-0.2 bg-rose-950 text-rose-300 border border-rose-800/40 rounded font-mono">
+              LIVE
+            </span>
           </button>
 
           <button
@@ -306,91 +351,156 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Sección Proyectos (Direct from screenshot) */}
+        {/* Sección Proyectos con botón de Creación */}
         <div>
           <div 
-            className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-300"
-            onClick={() => setProjectsOpen(!projectsOpen)}
+            className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-300 group"
           >
-            <div className="flex items-center gap-1.5">
+            <div 
+              className="flex items-center gap-1.5 flex-1"
+              onClick={() => setProjectsOpen(!projectsOpen)}
+            >
               <FolderKanban size={11} className="text-cyan-400" />
-              <span>Proyectos</span>
+              <span>Proyectos ({activeProjects.length})</span>
+              {projectsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </div>
-            {projectsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+
+            {onOpenNewProject && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenNewProject();
+                }}
+                title="Crear Nuevo Proyecto en Windows"
+                className="p-1 text-gray-400 hover:text-cyan-300 hover:bg-[#252a38] rounded transition-colors flex items-center gap-0.5 text-[10px]"
+              >
+                <Plus size={12} />
+              </button>
+            )}
           </div>
 
           {projectsOpen && (
             <div className="mt-1 space-y-1">
-              {/* grupo.SHIP24GO */}
-              <div 
-                className="px-2 py-1 rounded hover:bg-white/[0.03] cursor-pointer"
-                onClick={() => onSelectProject('proj-ship24go')}
-              >
-                <div className="text-gray-300 font-medium truncate">📁 grupo.SHIP24GO</div>
-                <div className="text-[11px] text-gray-400 pl-4 truncate">Hola</div>
-              </div>
+              {activeProjects.map((proj) => {
+                const isActive = proj.id === activeProjectId;
+                return (
+                  <div
+                    key={proj.id}
+                    className={`p-2 rounded-lg cursor-pointer transition-colors relative group ${
+                      isActive
+                        ? 'bg-[#212530] border border-cyan-500/40 text-cyan-200 shadow-sm'
+                        : 'hover:bg-white/[0.03] text-gray-300'
+                    }`}
+                    onClick={() => {
+                      onSelectProject(proj.id);
+                      onSelectView('workspace');
+                    }}
+                  >
+                    <div className="text-gray-300 font-medium text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 truncate flex-1">
+                        <span>📁</span>
+                        <span className="truncate">{proj.category || proj.name}</span>
+                      </div>
 
-              {/* Plataforma de gastos -> Construye ErogaAI SaaS local (ACTIVE) */}
-              <div 
-                className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                  activeProjectId === 'proj-eroga' 
-                    ? 'bg-[#212530] border border-cyan-500/40 text-cyan-200 shadow-sm' 
-                    : 'hover:bg-white/[0.03]'
-                }`}
-                onClick={() => {
-                  onSelectProject('proj-eroga');
-                  onSelectView('workspace');
-                }}
-              >
-                <div className="text-gray-300 font-medium text-xs flex items-center justify-between">
-                  <span>📁 Plataforma de gastos</span>
-                  {activeProjectId === 'proj-eroga' && (
-                    <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
-                  )}
-                </div>
-                <div className="text-xs font-semibold text-cyan-300 pl-2 mt-0.5 truncate">
-                  Construye ErogaAI SaaS local
-                </div>
-              </div>
+                      <div className="flex items-center gap-1">
+                        {getPermissionBadge(proj.permissionLevel)}
+                        {isActive && (
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
+                        )}
+                      </div>
+                    </div>
 
-              {/* vps nuevo */}
-              <div 
-                className="px-2 py-1 rounded hover:bg-white/[0.03] cursor-pointer"
-                onClick={() => onSelectProject('proj-vps')}
-              >
-                <div className="text-gray-300 font-medium truncate">📁 vps nuevo</div>
-                <div className="text-[11px] text-gray-400 pl-4 truncate">Investiga acceso al VPS</div>
-                <div className="text-[11px] text-gray-400 pl-4 truncate">Accede al VPS trucloud</div>
-              </div>
+                    <div className={`text-xs pl-4 mt-0.5 truncate flex items-center justify-between ${
+                      isActive ? 'font-semibold text-cyan-300' : 'text-gray-400'
+                    }`}>
+                      <span className="truncate">{proj.name}</span>
 
-              {/* CodeMorf */}
-              <div 
-                className="px-2 py-1 rounded hover:bg-white/[0.03] cursor-pointer"
-                onClick={() => onSelectProject('proj-codemorf-scraper')}
-              >
-                <div className="text-gray-300 font-medium truncate">📁 CodeMorf</div>
-                <div className="text-[11px] text-gray-400 pl-4 truncate">Crear scraper de prospectos RD</div>
-              </div>
-
-              {/* buscador de clientes redes sociales */}
-              <div className="px-2 py-1 rounded hover:bg-white/[0.03] cursor-pointer">
-                <div className="text-gray-300 font-medium truncate">📁 buscador de clientes redes</div>
-                <div className="text-[11px] text-gray-400 pl-4 truncate">Evaluar automatización de Zernior</div>
-              </div>
-
-              {/* RESTAPP */}
-              <div className="px-2 py-1 rounded hover:bg-white/[0.03] cursor-pointer" onClick={() => onSelectProject('proj-restapp')}>
-                <div className="text-gray-300 font-medium truncate">📁 RESTAPP</div>
-                <div className="text-[11px] text-gray-400 pl-4">Sin chats</div>
-              </div>
-
-              {/* app familiar */}
-              <div className="px-2 py-1 text-gray-400 hover:text-gray-300 cursor-pointer">
-                📁 app familiar
-              </div>
+                      {/* Hover action menu for archive */}
+                      {onArchiveProject && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onArchiveProject(proj.id);
+                          }}
+                          title="Archivar este proyecto"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-amber-300 transition-opacity ml-1"
+                        >
+                          <Archive size={11} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
+
+        {/* Sección Proyectos Archivados */}
+        {archivedProjects.length > 0 && (
+          <div className="pt-2 border-t border-[#20232e]">
+            <div 
+              className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold text-purple-400 uppercase tracking-wider cursor-pointer hover:text-purple-300"
+              onClick={() => setArchivedOpen(!archivedOpen)}
+            >
+              <div className="flex items-center gap-1.5">
+                <Archive size={11} className="text-purple-400" />
+                <span>Archivados ({archivedProjects.length})</span>
+              </div>
+              {archivedOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </div>
+
+            {archivedOpen && (
+              <div className="mt-1 space-y-1">
+                {archivedProjects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    className="p-2 rounded-lg bg-[#14151c] border border-[#202330] hover:border-purple-900/50 cursor-pointer transition-colors flex items-center justify-between group"
+                    onClick={() => {
+                      onSelectProject(proj.id);
+                      onSelectView('workspace');
+                    }}
+                  >
+                    <div className="truncate flex-1">
+                      <div className="text-xs text-gray-400 truncate flex items-center gap-1">
+                        <span>📦</span>
+                        <span className="line-through">{proj.name}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 pl-4">{proj.lastActive}</div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {onUnarchiveProject && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUnarchiveProject(proj.id);
+                          }}
+                          title="Restaurar a Activos"
+                          className="p-1 text-purple-400 hover:text-purple-200 hover:bg-purple-950/60 rounded"
+                        >
+                          <ArchiveRestore size={11} />
+                        </button>
+                      )}
+                      {onDeleteProject && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject(proj.id);
+                          }}
+                          title="Eliminar permanentemente"
+                          className="p-1 text-gray-500 hover:text-rose-400 hover:bg-rose-950/40 rounded"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom User Pill matching screenshot */}
