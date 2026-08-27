@@ -1,0 +1,6 @@
+{
+  "name": "CodeMorf CLI",
+  "description": "Windows desktop agentic coding platform with multi-agent orchestration, interactive workspace, Codex-style timeline & loader, browser, git center, and MCP server manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
