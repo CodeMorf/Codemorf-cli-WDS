@@ -31,7 +31,7 @@ export interface ProjectItem {
   lastPromptSnippet?: string;
   pinned?: boolean;
   isArchived?: boolean;
-  status: 'idle' | 'running' | 'completed' | 'error';
+  status: 'idle' | 'running' | 'completed' | 'error' | 'archived';
   filesCount?: number;
   permissionLevel?: PermissionLevel;
   techStack?: string;
@@ -92,7 +92,7 @@ export interface ChatMessage {
     duration?: string;
     details?: string;
   }[];
-  workingTime?: string; // e.g. "Ha trabajado durante 10s"
+  workingTime?: string;
 }
 
 export interface KanbanTask {
@@ -222,12 +222,12 @@ export interface NotificationItem {
   id: string;
   title: string;
   message: string;
-  time: string;
+  time?: string;
+  timestamp?: string;
   type: 'success' | 'warning' | 'error' | 'info';
   read: boolean;
 }
 
-// Aliases for compatibility
 export type ViewMode = MainView;
 export type McpServerItem = McpServer;
 export type AiProviderConfig = AiProvider;
