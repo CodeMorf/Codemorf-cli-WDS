@@ -1,67 +1,108 @@
 # CodeMorf CLI — Windows Runtime
 
-## Architecture
-
-CodeMorf Desktop uses Tauri 2 + React. Native operations run in the Rust backend, never directly in the WebView.
+CodeMorf Desktop is a Tauri 2 + React desktop application. Native operations execute in Rust, outside the browser sandbox.
 
 ```text
 React UI
   -> Tauri invoke/events
 Rust runtime
   -> PowerShell / CMD
-  -> Git
+  -> Git / GitHub CLI
   -> local filesystem
   -> SQLite memory
-  -> Grok Build CLI (`grok agent stdio`)
+  -> N x Grok Build ACP processes
+       -> isolated Git worktrees for multi-agent jobs
 ```
 
-## Grok Build
+## Requirements
 
-CodeMorf does not bundle or impersonate the xAI binary. Install the official Grok Build CLI on Windows and authenticate it once:
+- Windows 10/11 x64
+- Git for Windows
+- Node.js 22+ and Rust only when building from source
+- Grok Build CLI for agentic coding
+- GitHub CLI (`gh`) if Create PR is required
+
+## Install Grok Build on Windows
+
+Use the official xAI PowerShell installer:
 
 ```powershell
 irm https://x.ai/cli/install.ps1 | iex
-grok login
+grok
 grok --version
 ```
 
-CodeMorf resolves `grok` from PATH and also checks `%USERPROFILE%\.grok\bin\grok.exe`. For development/testing you may set `CODEMORF_GROK_CLI` to an explicit executable path.
+The first Grok launch opens browser authentication. `XAI_API_KEY` is also supported by the upstream CLI.
 
-The integration starts:
+CodeMorf searches `grok` in PATH, `%USERPROFILE%\.grok\bin\grok.exe`, or `CODEMORF_GROK_CLI` when explicitly configured.
+
+CodeMorf does not bundle or impersonate the xAI executable.
+
+## ACP integration
+
+Each CodeMorf coding-agent runtime launches:
 
 ```text
-grok agent stdio
+grok agent --always-approve stdio
 ```
 
-and transports ACP JSON-RPC messages through Tauri events. `--always-approve` is opt-in only.
+and communicates using ACP JSON-RPC over stdin/stdout. CodeMorf gates that autonomy with its own permission mode before starting an agent turn:
 
-## Local memory
+- **Read only** — agentic execution is blocked.
+- **Confirm per task** — user approves the task before Grok receives tool autonomy.
+- **Full access** — no CodeMorf confirmation dialog.
 
-Persistent memory is stored under the Windows application data directory in `codemorf-memory.sqlite3`. The Rust backend owns the database and exposes list/upsert/delete commands.
+ACP sessions are long-lived. The Workspace reuses its session while the project path is unchanged.
 
-## Real terminal
+## Multi-agent
 
-`run_command` executes PowerShell by default and optionally CMD. The UI should always pass the active workspace as `cwd`. Commands execute with the permissions of the logged-in Windows user; CodeMorf does not request administrator elevation automatically.
+The Multi-Agent Manager can launch multiple independent Grok ACP processes. Before an agent starts, CodeMorf creates an isolated Git worktree:
 
-## Git / GitHub
+```text
+<repo>\.codemorf\worktrees\<agent-id>
+branch: codemorf/<agent-id>
+```
 
-`git_command` uses the user's installed Git for Windows and existing credential manager. GitHub authentication remains under the user's Git/GitHub credential configuration.
+This prevents parallel agents from editing the same checkout. Each agent has its own ACP process, session ID, branch and live event stream.
 
-## Builds
+## Terminal
+
+The Terminal view invokes real PowerShell or CMD via Rust and displays actual stdout, stderr and exit code. It does not emulate command results.
+
+## Files
+
+The Files view lists real directories, opens text files and writes changes through Rust. Read-only and confirm-per-task policies are enforced before writes.
+
+## Git and GitHub
+
+The Git Center invokes the installed Git executable for status, history, stage, commit, pull, push and diff checks. Create PR invokes the installed GitHub CLI (`gh`) and therefore uses the user's own GitHub authentication.
+
+## Browser
+
+The Browser view loads the requested URL in a real embedded frame. Sites that deny embedding through CSP/X-Frame-Options must be opened externally. Fake Console/Network/DOM data has been removed.
+
+## Memory
+
+Memory is stored locally in SQLite under the CodeMorf application-data directory (`codemorf-memory.sqlite3`). Add, delete and pin operations are persisted by the Rust backend.
+
+## Build
 
 ```powershell
-npm ci
+npm install
 npm run lint
 npm run build
 npm run desktop:dev
 npm run desktop:build
 ```
 
-`desktop:build` produces MSI and NSIS bundles under `src-tauri/target/release/bundle/`.
+`desktop:build` creates MSI and NSIS bundles under `src-tauri/target/release/bundle/`.
 
-## Safety
+The GitHub Actions workflow performs TypeScript validation, web build, `cargo check`, Tauri packaging, and uploads the resulting Windows installers as an artifact.
 
-- Grok always-approve is disabled by default.
-- No remote installer is executed automatically.
+## Security boundaries
+
 - No API key is committed to the repository.
-- Native filesystem and shell actions stay in the Rust process boundary.
+- CodeMorf does not elevate to Administrator automatically.
+- Native shell/filesystem operations stay behind Tauri commands.
+- Grok autonomy is gated by CodeMorf's permission setting.
+- Multi-agent work is isolated with Git worktrees.
