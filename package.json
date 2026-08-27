@@ -10,8 +10,9 @@
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist', {recursive:true, force:true}); try { fs.rmSync('server.js', {force:true}); } catch(e){}\"",
     "lint": "tsc --noEmit",
     "tauri": "tauri",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "icon:materialize": "node scripts/materialize-icon.mjs",
+    "desktop:dev": "npm run icon:materialize && tauri dev",
+    "desktop:build": "npm run icon:materialize && tauri build"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
