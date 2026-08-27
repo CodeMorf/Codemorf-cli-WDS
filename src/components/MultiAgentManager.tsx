@@ -1,22 +1,9 @@
-import React, { useState } from 'react';
-import { 
-  Bot, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Terminal, 
-  Cpu, 
-  FolderGit2, 
-  Clock, 
-  CheckCircle2, 
-  Activity, 
-  Plus, 
-  Settings,
-  Layers,
-  Sparkles,
-  Zap
-} from 'lucide-react';
-import { AgentInfo } from '../types';
+import React, { useRef, useState } from 'react';
+import { Bot, FolderGit2, Pause, Play, Terminal } from 'lucide-react';
+import type { AgentInfo } from '../types';
+import { GrokAcpClient } from '../lib/grokAcp';
+import { isTauri, nativeGit } from '../lib/native';
+import { getLastWorkspace, getPermissionLevel, setLastWorkspace } from '../lib/runtimeSettings';
 
 interface MultiAgentManagerProps {
   agents: AgentInfo[];
@@ -25,184 +12,100 @@ interface MultiAgentManagerProps {
   onStopAll: () => void;
 }
 
-export const MultiAgentManager: React.FC<MultiAgentManagerProps> = ({
-  agents,
-  onToggleAgent,
-  onRunAll,
-  onStopAll
-}) => {
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || 'agent-frontend');
-  const selectedAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
+type RuntimeState = { status: string; worktree?: string; sessionId?: string; logs: string[] };
 
-  const getStatusColor = (status: AgentInfo['status']) => {
-    switch (status) {
-      case 'Editing':
-      case 'Running':
-      case 'Thinking':
-        return 'bg-cyan-950 text-cyan-300 border-cyan-700/50';
-      case 'Testing':
-        return 'bg-violet-950 text-violet-300 border-violet-700/50';
-      case 'Completed':
-        return 'bg-emerald-950 text-emerald-300 border-emerald-700/50';
-      default:
-        return 'bg-gray-800 text-gray-400 border-gray-700';
+function textFromUpdate(message: any): string | null {
+  if (message?.method === 'codemorf/stderr') return `[stderr] ${message.params?.text || ''}`;
+  if (message?.method !== 'session/update') return null;
+  const u = message?.params?.update || {};
+  const kind = u.sessionUpdate || 'update';
+  const text = u?.content?.text || u?.text || u?.title || u?.status;
+  return text ? `[${kind}] ${String(text)}` : `[${kind}]`;
+}
+
+export const MultiAgentManager: React.FC<MultiAgentManagerProps> = ({ agents, onRunAll, onStopAll }) => {
+  const [root, setRoot] = useState(getLastWorkspace(''));
+  const [selectedId, setSelectedId] = useState(agents[0]?.id || '');
+  const [runtime, setRuntime] = useState<Record<string, RuntimeState>>({});
+  const clients = useRef(new Map<string, GrokAcpClient>());
+
+  const patch = (id: string, value: Partial<RuntimeState>) => setRuntime(prev => ({ ...prev, [id]: { status: 'Idle', logs: [], ...(prev[id] || {}), ...value } }));
+  const log = (id: string, line: string) => setRuntime(prev => ({ ...prev, [id]: { status: prev[id]?.status || 'Running', worktree: prev[id]?.worktree, sessionId: prev[id]?.sessionId, logs: [...(prev[id]?.logs || []), line].slice(-300) } }));
+
+  const worktreePath = (id: string) => `${root.replace(/[\\/]+$/, '')}\\.codemorf\\worktrees\\${id}`;
+
+  const startAgent = async (agent: AgentInfo) => {
+    if (!isTauri()) { patch(agent.id, { status: 'Error', logs: ['Multi-agent real requiere CodeMorf Desktop.'] }); return; }
+    if (!root.trim()) { patch(agent.id, { status: 'Error', logs: ['Define la ruta del repositorio.'] }); return; }
+    const permission = getPermissionLevel();
+    if (permission === 'read_only') { patch(agent.id, { status: 'Blocked', logs: ['Modo Solo Lectura.'] }); return; }
+
+    const wt = worktreePath(agent.id);
+    patch(agent.id, { status: 'Preparing', worktree: wt, logs: [`Preparando worktree aislado: ${wt}`] });
+    try {
+      setLastWorkspace(root);
+      const prune = await nativeGit(['worktree', 'prune'], root);
+      if (prune.code !== 0) log(agent.id, prune.stderr);
+      const add = await nativeGit(['worktree', 'add', '-B', `codemorf/${agent.id}`, wt, 'HEAD'], root);
+      if (add.code !== 0 && !add.stderr.includes('already exists')) throw new Error(add.stderr || add.stdout);
+
+      const old = clients.current.get(agent.id);
+      if (old) await old.stop().catch(() => undefined);
+      const client = new GrokAcpClient(`multi-${agent.id}`);
+      client.onUpdate(msg => { const line = textFromUpdate(msg); if (line) log(agent.id, line); });
+      clients.current.set(agent.id, client);
+      patch(agent.id, { status: 'Starting', worktree: wt });
+      await client.start(wt, true);
+      patch(agent.id, { status: 'Running', sessionId: client.sessionId, worktree: wt });
+      log(agent.id, `ACP session: ${client.sessionId}`);
+      await client.prompt(`${agent.currentTask}\n\nTrabaja exclusivamente dentro de este worktree. Inspecciona, implementa, ejecuta tests relevantes y verifica tu diff antes de terminar.`);
+      patch(agent.id, { status: 'Completed', sessionId: client.sessionId, worktree: wt });
+      log(agent.id, 'Turno completado. Los cambios quedan aislados en su branch/worktree.');
+    } catch (e) {
+      patch(agent.id, { status: 'Failed', worktree: wt });
+      log(agent.id, String(e));
     }
   };
 
-  return (
-    <div id="multi-agent-manager" className="flex-1 flex flex-col overflow-hidden bg-[#16171e] text-gray-200 text-xs">
-      {/* Top Header */}
-      <div className="h-12 px-6 border-b border-[#232734] bg-[#181a22] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-cyan-950/80 text-cyan-400 border border-cyan-800/50 rounded-lg">
-            <Bot size={18} />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-gray-100">Multi-Agent Parallel Orchestration</h2>
-            <p className="text-[11px] text-gray-400">
-              Gestión de {agents.length} agentes autónomos ejecutándose en ramas y terminales independientes
-            </p>
-          </div>
-        </div>
+  const runAll = async () => {
+    if (getPermissionLevel() === 'ask_confirmation') {
+      const ok = window.confirm(`Ejecutar ${agents.length} agentes Grok en paralelo, cada uno en un Git worktree aislado bajo:\n${root}\\.codemorf\\worktrees\\ ?`);
+      if (!ok) return;
+    }
+    onRunAll();
+    await Promise.allSettled(agents.map(startAgent));
+  };
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRunAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors shadow-md shadow-cyan-900/30"
-          >
-            <Play size={12} className="fill-white" />
-            <span>Ejecutar Todos en Paralelo</span>
-          </button>
-          <button
-            onClick={onStopAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#252a36] hover:bg-[#303646] text-gray-300 border border-[#353c4d] rounded-lg transition-colors"
-          >
-            <Pause size={12} />
-            <span>Pausar Todos</span>
-          </button>
-        </div>
+  const stopAll = async () => {
+    await Promise.allSettled([...clients.current.values()].map(c => c.stop()));
+    clients.current.clear();
+    setRuntime(prev => Object.fromEntries(Object.entries(prev).map(([id, s]) => [id, { ...s, status: 'Stopped', logs: [...s.logs, 'Runtime detenido.'] }])));
+    onStopAll();
+  };
+
+  const selected = agents.find(a => a.id === selectedId) || agents[0];
+  const selectedRuntime = selected ? runtime[selected.id] : undefined;
+
+  return <div className="flex-1 flex flex-col overflow-hidden bg-[#15171d] text-gray-200 text-xs">
+    <header className="px-5 py-3 border-b border-[#242936] bg-[#191b23] flex items-center gap-3">
+      <Bot size={18} className="text-cyan-400"/><div><div className="font-semibold">Multi-Agent Orchestration</div><div className="text-[10px] text-gray-500">Procesos Grok ACP independientes + Git worktrees</div></div>
+      <input value={root} onChange={e => setRoot(e.target.value)} onBlur={() => setLastWorkspace(root)} placeholder="C:\\repositorio" className="ml-4 flex-1 bg-[#101217] border border-[#2a3040] rounded px-3 py-1.5 font-mono outline-none"/>
+      <button onClick={runAll} className="px-3 py-1.5 bg-cyan-600 rounded flex items-center gap-1"><Play size={12}/> Ejecutar todos</button>
+      <button onClick={stopAll} className="px-3 py-1.5 bg-[#292e3a] rounded flex items-center gap-1"><Pause size={12}/> Detener</button>
+    </header>
+    <div className="flex-1 grid grid-cols-[1fr_380px] overflow-hidden">
+      <div className="p-5 overflow-auto grid md:grid-cols-2 gap-3 content-start">
+        {agents.map(agent => { const r = runtime[agent.id]; return <button key={agent.id} onClick={() => setSelectedId(agent.id)} className={`text-left p-4 rounded-xl border ${selectedId === agent.id ? 'border-cyan-600 bg-[#1a1d26]' : 'border-[#292e3b] bg-[#171920]'}`}>
+          <div className="flex items-start gap-3"><Bot size={20} className="text-cyan-400"/><div className="flex-1 min-w-0"><div className="font-semibold text-sm">{agent.name}</div><div className="text-[10px] text-gray-500 font-mono">{agent.role} · codemorf/{agent.id}</div></div><span className="px-2 py-0.5 rounded bg-[#20242e] text-[10px] text-cyan-300">{r?.status || 'Idle'}</span></div>
+          <div className="mt-3 p-2.5 bg-[#101217] rounded text-gray-300">{agent.currentTask}</div>
+          {r?.worktree && <div className="mt-2 text-[10px] font-mono text-gray-500 truncate"><FolderGit2 size={10} className="inline mr-1"/>{r.worktree}</div>}
+        </button>; })}
       </div>
-
-      {/* Main Body with Agent Cards Grid & Active Inspector */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Grid of Agent Cards */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {agents.map((agent) => {
-              const isSelected = agent.id === selectedAgentId;
-              return (
-                <div
-                  key={agent.id}
-                  onClick={() => setSelectedAgentId(agent.id)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#1e222d] border-cyan-500/60 shadow-lg shadow-cyan-950/40'
-                      : 'bg-[#16181f] border-[#262b38] hover:border-[#373e52]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${agent.avatarColor} p-0.5 shadow-md flex items-center justify-center text-black font-bold text-sm`}>
-                        <Bot size={20} className="text-black" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-100 text-sm flex items-center gap-2">
-                          <span>{agent.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 bg-[#2a2f3e] text-cyan-300 rounded font-mono">
-                            {agent.role}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-2">
-                          <FolderGit2 size={11} className="text-gray-500" />
-                          <span>{agent.branch}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${getStatusColor(agent.status)}`}>
-                      {agent.status}
-                    </span>
-                  </div>
-
-                  {/* Current Task Box */}
-                  <div className="mt-3 p-2.5 bg-[#12141a] rounded-lg border border-[#232734] text-xs">
-                    <div className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-0.5">
-                      Tarea Activa:
-                    </div>
-                    <p className="text-gray-200 line-clamp-2">{agent.currentTask}</p>
-                  </div>
-
-                  {/* Agent Metrics Bar */}
-                  <div className="mt-3 pt-3 border-t border-[#232734] flex items-center justify-between text-[11px] text-gray-400">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} className="text-gray-500" />
-                        <span className="font-mono">{agent.duration}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Zap size={11} className="text-amber-400" />
-                        <span>{agent.actionsCount} acciones</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 font-mono text-[10px]">
-                      <span>CPU: {agent.cpuUsage}</span>
-                      <span>RAM: {agent.memoryUsage}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right Detail / Agent Terminal Panel */}
-        <div className="w-96 bg-[#13151b] border-l border-[#232734] flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-[#232734] bg-[#181a22] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Terminal size={14} className="text-emerald-400" />
-              <span className="font-semibold text-gray-200">
-                Terminal: {selectedAgent.role} Agent
-              </span>
-            </div>
-            <button
-              onClick={() => onToggleAgent(selectedAgent.id)}
-              className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/50 rounded text-xs transition-colors"
-            >
-              Reiniciar Agente
-            </button>
-          </div>
-
-          {/* Modified Files Section */}
-          <div className="p-3 border-b border-[#232734] bg-[#14161d] space-y-1.5">
-            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              Archivos Modificados ({selectedAgent.modifiedFiles.length})
-            </div>
-            <div className="space-y-1">
-              {selectedAgent.modifiedFiles.map((file, fIdx) => (
-                <div key={fIdx} className="px-2 py-1 bg-[#1a1c25] rounded font-mono text-[11px] text-cyan-300 truncate">
-                  {file}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Live Agent Terminal Stream */}
-          <div className="flex-1 p-4 bg-[#0e1014] font-mono text-[11px] overflow-y-auto space-y-1 text-gray-300 select-text">
-            <div className="text-gray-500 mb-2">// CodeMorf Agent Isolated Sandbox v3.8</div>
-            <div className="text-gray-400">// Worktree Branch: {selectedAgent.branch}</div>
-            {selectedAgent.terminalLogs.map((log, lIdx) => (
-              <div key={lIdx} className="leading-relaxed">
-                <span className="text-cyan-500">{'>'}</span> {log}
-              </div>
-            ))}
-            <div className="flex items-center gap-2 text-cyan-400 animate-pulse pt-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400" />
-              <span>Escuchando eventos de workspace...</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <aside className="border-l border-[#242936] bg-[#0e1015] flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-[#242936] flex items-center gap-2"><Terminal size={14} className="text-emerald-400"/><span className="font-semibold">{selected?.name || 'Agente'}</span></div>
+        <div className="p-3 border-b border-[#242936] text-[10px] text-gray-500 font-mono break-all">Session: {selectedRuntime?.sessionId || '—'}<br/>Worktree: {selectedRuntime?.worktree || '—'}</div>
+        <div className="flex-1 overflow-auto p-3 font-mono text-[11px] whitespace-pre-wrap space-y-1">{(selectedRuntime?.logs || ['Sin ejecución todavía.']).map((line, i) => <div key={i} className={line.includes('stderr') || line.includes('Error') ? 'text-rose-400' : 'text-gray-300'}>{line}</div>)}</div>
+      </aside>
     </div>
-  );
+  </div>;
 };
