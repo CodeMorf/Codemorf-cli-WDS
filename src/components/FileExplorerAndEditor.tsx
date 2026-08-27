@@ -1,371 +1,97 @@
-import React, { useState } from 'react';
-import { 
-  Folder, 
-  FolderOpen, 
-  FileCode2, 
-  Search, 
-  ChevronRight, 
-  ChevronDown, 
-  Copy, 
-  Check, 
-  Sparkles,
-  FileText,
-  Settings,
-  Code2
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FileCode2, Folder, FolderOpen, RefreshCw, Save, Search } from 'lucide-react';
+import { getLastWorkspace, getPermissionLevel, setLastWorkspace } from '../lib/runtimeSettings';
+import { isTauri, listDirectory, readTextFile, writeTextFile } from '../lib/native';
 
-interface FileNode {
-  name: string;
-  type: 'file' | 'folder';
-  path: string;
-  children?: FileNode[];
-  content?: string;
-  modified?: boolean;
-}
+type Entry = { name: string; path: string; isDir: boolean; size: number | null };
 
 export const FileExplorerAndEditor: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
-    src: true,
-    'src/components': true,
-    server: true,
-    'server/db': true
-  });
-  const [activeFilePath, setActiveFilePath] = useState('server/db/schema.ts');
-  const [copied, setCopied] = useState(false);
+  const [cwd, setCwd] = useState(getLastWorkspace(''));
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [currentDir, setCurrentDir] = useState(cwd);
+  const [activeFile, setActiveFile] = useState('');
+  const [content, setContent] = useState('');
+  const [original, setOriginal] = useState('');
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const fileTree: FileNode = {
-    name: 'ErogaAI-Root',
-    type: 'folder',
-    path: '',
-    children: [
-      {
-        name: 'src',
-        type: 'folder',
-        path: 'src',
-        children: [
-          {
-            name: 'components',
-            type: 'folder',
-            path: 'src/components',
-            children: [
-              {
-                name: 'ErogaDashboard.tsx',
-                type: 'file',
-                path: 'src/components/ErogaDashboard.tsx',
-                modified: true,
-                content: `import React, { useState } from 'react';
-import { ExpensesTable } from './ExpensesTable';
+  const modified = content !== original;
+  const filtered = useMemo(() => entries.filter(e => e.name.toLowerCase().includes(query.toLowerCase())), [entries, query]);
 
-export function ErogaDashboard() {
-  const [expenses, setExpenses] = useState([]);
-
-  return (
-    <div className="p-6 bg-slate-900 min-h-screen text-slate-100">
-      <h1 className="text-2xl font-bold text-cyan-400">ErogaAI SaaS Dashboard</h1>
-      <p className="text-slate-400">Gestión multi-empresa y comprobantes SAT</p>
-      <ExpensesTable data={expenses} />
-    </div>
-  );
-}`
-              },
-              {
-                name: 'ExpensesTable.tsx',
-                type: 'file',
-                path: 'src/components/ExpensesTable.tsx',
-                modified: false,
-                content: `import React from 'react';
-
-export function ExpensesTable({ data }: { data: any[] }) {
-  return (
-    <table className="w-full text-left mt-4 border border-slate-800">
-      <thead>
-        <tr>
-          <th>Concepto</th>
-          <th>Monto</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((item, idx) => (
-          <tr key={idx}><td>{item.title}</td><td>{item.amount}</td></tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}`
-              }
-            ]
-          },
-          {
-            name: 'App.tsx',
-            type: 'file',
-            path: 'src/App.tsx',
-            modified: true,
-            content: `import React from 'react';
-import { ErogaDashboard } from './components/ErogaDashboard';
-
-export default function App() {
-  return <ErogaDashboard />;
-}`
-          },
-          {
-            name: 'main.tsx',
-            type: 'file',
-            path: 'src/main.tsx',
-            modified: false,
-            content: `import { createRoot } from 'react-dom/client';
-import App from './App';
-import './index.css';
-
-createRoot(document.getElementById('root')!).render(<App />);`
-          }
-        ]
-      },
-      {
-        name: 'server',
-        type: 'folder',
-        path: 'server',
-        children: [
-          {
-            name: 'db',
-            type: 'folder',
-            path: 'server/db',
-            children: [
-              {
-                name: 'schema.ts',
-                type: 'file',
-                path: 'server/db/schema.ts',
-                modified: true,
-                content: `import { pgTable, serial, text, timestamp, numeric, integer } from 'drizzle-orm/pg-core';
-
-export const tenants = pgTable('tenants', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  createdAt: timestamp('created_at').defaultNow()
-});
-
-export const expenses = pgTable('expenses', {
-  id: serial('id').primaryKey(),
-  tenantId: integer('tenant_id').references(() => tenants.id),
-  title: text('title').notNull(),
-  category: text('category').notNull(),
-  amount: numeric('amount').notNull(),
-  status: text('status').default('pending'),
-  createdAt: timestamp('created_at').defaultNow()
-});`
-              }
-            ]
-          },
-          {
-            name: 'index.ts',
-            type: 'file',
-            path: 'server/index.ts',
-            modified: true,
-            content: `import express from 'express';
-import { db } from './db';
-
-const app = express();
-const PORT = process.env.PORT || 4000;
-
-app.use(express.json());
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date() });
-});
-
-app.listen(PORT, () => {
-  console.log('Server active on port ' + PORT);
-});`
-          }
-        ]
-      },
-      {
-        name: '.env.example',
-        type: 'file',
-        path: '.env.example',
-        modified: true,
-        content: `PORT=4000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/eroga_db
-JWT_SECRET=codemorf_hyper_secure_key_2026`
-      },
-      {
-        name: 'package.json',
-        type: 'file',
-        path: 'package.json',
-        modified: true,
-        content: `{
-  "name": "eroga-ai-saas",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build"
-  },
-  "dependencies": {
-    "drizzle-orm": "^0.39.0",
-    "express": "^4.21.2",
-    "react": "^19.0.0"
-  }
-}`
-      },
-      {
-        name: 'README.md',
-        type: 'file',
-        path: 'README.md',
-        modified: true,
-        content: `# ErogaAI SaaS Local
-
-Proyecto autónomo exportado de Google AI Studio e integrado con CodeMorf CLI.
-- Backend: Express + Drizzle ORM + PostgreSQL
-- Frontend: React 19 + Tailwind CSS
-- Multi-Agent Support: Compatible con agentes autónomos paralelos.`
-      }
-    ]
+  const openDir = async (path: string) => {
+    if (!isTauri()) { setError('El filesystem real está disponible en CodeMorf Desktop.'); return; }
+    setBusy(true); setError('');
+    try {
+      const data = await listDirectory(path);
+      setEntries(data);
+      setCurrentDir(path);
+      setCwd(path);
+      setLastWorkspace(path);
+    } catch (e) { setError(String(e)); }
+    finally { setBusy(false); }
   };
 
-  const toggleFolder = (path: string) => {
-    setOpenFolders(prev => ({ ...prev, [path]: !prev[path] }));
+  useEffect(() => { if (isTauri() && cwd) openDir(cwd); }, []);
+
+  const openEntry = async (entry: Entry) => {
+    if (entry.isDir) { await openDir(entry.path); return; }
+    setBusy(true); setError('');
+    try {
+      const text = await readTextFile(entry.path);
+      setActiveFile(entry.path);
+      setContent(text);
+      setOriginal(text);
+    } catch (e) { setError(`No se pudo abrir como texto: ${String(e)}`); }
+    finally { setBusy(false); }
   };
 
-  const findFileContent = (node: FileNode, path: string): string => {
-    if (node.path === path && node.content) return node.content;
-    if (node.children) {
-      for (const child of node.children) {
-        const res = findFileContent(child, path);
-        if (res) return res;
-      }
-    }
-    return '// Archivo vacío';
+  const save = async () => {
+    if (!activeFile || !modified) return;
+    const permission = getPermissionLevel();
+    if (permission === 'read_only') { setError('Modo Solo Lectura: escritura bloqueada.'); return; }
+    if (permission === 'ask_confirmation' && !window.confirm(`¿Permitir que CodeMorf escriba este archivo?\n\n${activeFile}`)) return;
+    setBusy(true); setError('');
+    try {
+      await writeTextFile(activeFile, content);
+      setOriginal(content);
+    } catch (e) { setError(String(e)); }
+    finally { setBusy(false); }
   };
 
-  const activeContent = findFileContent(fileTree, activeFilePath);
-
-  const renderTree = (node: FileNode) => {
-    if (node.type === 'folder') {
-      const isOpen = openFolders[node.path];
-      return (
-        <div key={node.path} className="space-y-0.5">
-          {node.name !== 'ErogaAI-Root' && (
-            <button
-              onClick={() => toggleFolder(node.path)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/[0.04] text-gray-400 hover:text-gray-200 text-left"
-            >
-              {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              {isOpen ? <FolderOpen size={13} className="text-cyan-400" /> : <Folder size={13} className="text-gray-400" />}
-              <span className="truncate">{node.name}</span>
-            </button>
-          )}
-          {isOpen && node.children && (
-            <div className={node.name !== 'ErogaAI-Root' ? 'pl-3.5 space-y-0.5 border-l border-[#222632] ml-2' : 'space-y-0.5'}>
-              {node.children.map(child => renderTree(child))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    const isSelected = activeFilePath === node.path;
-    return (
-      <button
-        key={node.path}
-        onClick={() => setActiveFilePath(node.path)}
-        className={`w-full flex items-center justify-between px-2 py-1 rounded text-left transition-colors font-mono text-[11px] ${
-          isSelected
-            ? 'bg-cyan-950/80 text-cyan-200 border border-cyan-800/40 font-medium'
-            : 'text-gray-400 hover:bg-white/[0.03] hover:text-gray-200'
-        }`}
-      >
-        <div className="flex items-center gap-1.5 truncate">
-          <FileCode2 size={12} className={isSelected ? 'text-cyan-400' : 'text-gray-500'} />
-          <span className="truncate">{node.name}</span>
-        </div>
-        {node.modified && (
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Modificado por agente" />
-        )}
-      </button>
-    );
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(activeContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const parentDir = () => {
+    const normalized = currentDir.replace(/[\\/]+$/, '');
+    const idx = Math.max(normalized.lastIndexOf('\\'), normalized.lastIndexOf('/'));
+    return idx > 2 ? normalized.slice(0, idx) : normalized;
   };
 
   return (
-    <div id="file-explorer-editor-view" className="flex-1 flex overflow-hidden bg-[#16171e] text-gray-200 text-xs">
-      {/* File Tree Explorer Sidebar */}
-      <div className="w-64 bg-[#14151b] border-r border-[#232734] flex flex-col overflow-hidden shrink-0">
-        <div className="p-3 border-b border-[#232734] bg-[#181a22] flex items-center justify-between">
-          <span className="font-semibold text-gray-200 text-xs uppercase tracking-wider">Explorador de Archivos</span>
-          <span className="text-[10px] text-emerald-400 font-mono">+14 mod</span>
-        </div>
-
-        {/* Search File Filter */}
-        <div className="p-2 border-b border-[#232734]">
-          <div className="flex items-center gap-2 bg-[#101217] px-2.5 py-1 rounded-lg border border-[#2a2f3e] text-xs">
-            <Search size={12} className="text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filtrar archivos..."
-              className="w-full bg-transparent outline-none text-gray-200 text-xs"
-            />
-          </div>
-        </div>
-
-        {/* File Tree List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {renderTree(fileTree)}
-        </div>
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#15171d] text-gray-200 text-xs">
+      <div className="px-4 py-2 border-b border-[#232734] flex gap-2 bg-[#191b23]">
+        <input value={cwd} onChange={e => setCwd(e.target.value)} placeholder="C:\\ruta\\proyecto" className="flex-1 bg-[#101217] border border-[#2a3040] rounded px-3 py-1.5 font-mono outline-none"/>
+        <button onClick={() => openDir(cwd)} disabled={busy} className="px-3 py-1.5 bg-cyan-600 rounded flex items-center gap-1"><FolderOpen size={13}/> Abrir</button>
+        <button onClick={() => openDir(currentDir)} disabled={busy || !currentDir} className="p-2 bg-[#242836] rounded"><RefreshCw size={13} className={busy ? 'animate-spin' : ''}/></button>
       </div>
-
-      {/* Code Viewer Panel */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#121319]">
-        {/* Editor Tabs & Breadcrumbs */}
-        <div className="h-10 px-4 border-b border-[#232734] bg-[#161820] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#121319] border-t-2 border-cyan-400 text-cyan-300 font-semibold rounded-t">
-              <FileCode2 size={13} className="text-cyan-400" />
-              <span>{activeFilePath.split('/').pop()}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            </div>
-            <span className="text-gray-500 text-[11px] hidden md:inline ml-2">{activeFilePath}</span>
+      {error && <div className="px-4 py-2 text-rose-300 bg-rose-950/40 border-b border-rose-900">{error}</div>}
+      <div className="flex-1 grid grid-cols-[300px_1fr] overflow-hidden">
+        <aside className="border-r border-[#232734] overflow-auto bg-[#12141a]">
+          <div className="p-2 border-b border-[#232734]">
+            <div className="flex items-center gap-2 bg-[#0f1116] border border-[#292e3c] rounded px-2 py-1.5"><Search size={12}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Filtrar archivos" className="bg-transparent outline-none flex-1"/></div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopyCode}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#222530] hover:bg-[#2c3040] text-gray-300 rounded text-xs transition-colors"
-            >
-              {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-              <span>{copied ? 'Copiado' : 'Copiar'}</span>
-            </button>
+          {currentDir && <button onClick={() => openDir(parentDir())} className="w-full text-left px-3 py-2 text-gray-400 hover:bg-white/5">..</button>}
+          {filtered.map(entry => <button key={entry.path} onClick={() => openEntry(entry)} className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-white/5 ${activeFile === entry.path ? 'bg-cyan-950/30 text-cyan-300' : ''}`}>
+            {entry.isDir ? <Folder size={14} className="text-amber-300"/> : <FileCode2 size={14} className="text-cyan-400"/>}
+            <span className="truncate">{entry.name}</span>
+            {!entry.isDir && entry.size != null && <span className="ml-auto text-[10px] text-gray-600">{entry.size} B</span>}
+          </button>)}
+        </aside>
+        <section className="flex flex-col overflow-hidden">
+          <div className="h-10 px-3 border-b border-[#232734] flex items-center justify-between bg-[#171920]">
+            <span className="font-mono text-[11px] truncate">{activeFile || 'Selecciona un archivo de texto'}</span>
+            <button onClick={save} disabled={!modified || busy} className="px-3 py-1 bg-cyan-600 disabled:opacity-40 rounded flex items-center gap-1"><Save size={12}/> Guardar</button>
           </div>
-        </div>
-
-        {/* Code Content View with Line Numbers & Minimap */}
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 p-4 overflow-y-auto font-mono text-[12px] leading-relaxed select-text space-y-0.5">
-            {activeContent.split('\n').map((line, idx) => (
-              <div key={idx} className="flex items-start gap-4 hover:bg-white/[0.02]">
-                <span className="w-8 text-right text-gray-600 select-none text-[11px] shrink-0 font-mono">
-                  {idx + 1}
-                </span>
-                <pre className="font-mono text-gray-200 whitespace-pre-wrap flex-1">{line}</pre>
-              </div>
-            ))}
-          </div>
-
-          {/* Minimap preview simulation */}
-          <div className="w-20 bg-[#0e1014] border-l border-[#202430] hidden lg:block p-1 text-[4px] leading-tight text-gray-600 font-mono select-none overflow-hidden opacity-50">
-            {activeContent.split('\n').slice(0, 40).map((line, idx) => (
-              <div key={idx} className="truncate">{line || ' '}</div>
-            ))}
-          </div>
-        </div>
+          <textarea value={content} onChange={e => setContent(e.target.value)} spellCheck={false} disabled={!activeFile} className="flex-1 resize-none bg-[#0e1015] text-gray-200 p-4 outline-none font-mono text-[12px] leading-5"/>
+        </section>
       </div>
     </div>
   );
