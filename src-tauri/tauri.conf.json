@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CodeMorf CLI",
+  "version": "0.1.0",
+  "identifier": "tech.codemorf.cli",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "CodeMorf CLI",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "publisher": "CodeMorf",
+    "copyright": "Copyright © 2026 CodeMorf",
+    "category": "DeveloperTool",
+    "shortDescription": "Agentic development environment for Windows",
+    "longDescription": "CodeMorf CLI is a Windows agentic development environment with real shell, Git, local memory and Grok Build ACP integration."
+  }
+}
