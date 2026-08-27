@@ -11,12 +11,16 @@ interface PermissionsCenterProps {
 }
 
 export const PermissionsCenter: React.FC<PermissionsCenterProps> = ({ permissions, onUpdatePermissionMode, globalPermissionLevel = 'ask_confirmation', onUpdateGlobalPermissionLevel }) => {
-  const [selected, setSelected] = useState<PermissionLevel>(() => getPermissionLevel(globalPermissionLevel));
+  const [selected, setSelected] = useState<PermissionLevel>(() => getPermissionLevel());
 
   useEffect(() => {
     setPermissionLevel(selected);
     onUpdateGlobalPermissionLevel?.(selected);
-  }, [selected]);
+  }, [selected, onUpdateGlobalPermissionLevel]);
+
+  useEffect(() => {
+    if (!getPermissionLevel()) setSelected(globalPermissionLevel);
+  }, [globalPermissionLevel]);
 
   const icon = (name: string) => {
     if (name === 'Terminal') return <Terminal size={16} className="text-emerald-400"/>;
