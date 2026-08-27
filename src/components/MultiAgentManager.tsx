@@ -31,7 +31,6 @@ export const MultiAgentManager: React.FC<MultiAgentManagerProps> = ({ agents, on
 
   const patch = (id: string, value: Partial<RuntimeState>) => setRuntime(prev => ({ ...prev, [id]: { status: 'Idle', logs: [], ...(prev[id] || {}), ...value } }));
   const log = (id: string, line: string) => setRuntime(prev => ({ ...prev, [id]: { status: prev[id]?.status || 'Running', worktree: prev[id]?.worktree, sessionId: prev[id]?.sessionId, logs: [...(prev[id]?.logs || []), line].slice(-300) } }));
-
   const worktreePath = (id: string) => `${root.replace(/[\\/]+$/, '')}\\.codemorf\\worktrees\\${id}`;
 
   const startAgent = async (agent: AgentInfo) => {
@@ -79,7 +78,14 @@ export const MultiAgentManager: React.FC<MultiAgentManagerProps> = ({ agents, on
   const stopAll = async () => {
     await Promise.allSettled([...clients.current.values()].map(c => c.stop()));
     clients.current.clear();
-    setRuntime(prev => Object.fromEntries(Object.entries(prev).map(([id, s]) => [id, { ...s, status: 'Stopped', logs: [...s.logs, 'Runtime detenido.'] }])));
+    setRuntime(prev => {
+      const next: Record<string, RuntimeState> = {};
+      for (const id of Object.keys(prev)) {
+        const state = prev[id];
+        next[id] = { ...state, status: 'Stopped', logs: [...state.logs, 'Runtime detenido.'] };
+      }
+      return next;
+    });
     onStopAll();
   };
 
